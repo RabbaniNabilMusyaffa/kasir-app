@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use App\Models\Transaction;
+use App\Models\TransactionDetail;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class TransactionController extends Controller
 {
@@ -16,6 +19,30 @@ class TransactionController extends Controller
             $q->where('name', 'LIKE', '%' . $request->search . '%');
         })->orderBy('id', 'asc')->paginate($pagination);
         return view('transaction', compact('datas'));
+    }
+
+    public function store(Request $request)
+    {
+        Transaction::create([
+            'user_id' => Auth::id(),
+            'date' => Carbon::now(),
+            'total' => $request->total,
+            'pay_total' => $request->pay_total,
+        ]);
+
+        $items = session('cart');
+
+        foreach ($items as $item) {
+            TransactionDetail::create([
+                'transaction_id' => Transaction::latest()->first()->id,
+                'item_id' => $item['id'],
+                'qty' => $item['qty'],
+                'subtotal' => $item['subtotal']
+            ]);
+        }
+
+        session()->forget('cart');
+        return redirect()->route('transaction')->with('message', 'Berhasil Melakukan Transaksi');
     }
 
     public function Tambah($id)
